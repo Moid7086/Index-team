@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0d1f3c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Cookie Clicker</title>
+<style>
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:#0d1f3c;
+    color:#e8f2ff;
+    overscroll-behavior:none;
+    -webkit-user-select:none;user-select:none;
+    -webkit-tap-highlight-color:transparent;
+    touch-action:manipulation;
+  }
+
+  /* ---------- Layout ---------- */
+  .app{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    height:100vh;
+    height:100dvh;
+    max-width:520px;
+    margin:0 auto;
+    overflow:hidden;
+    background:#0d1f3c;
+  }
+
+  /* ---------- Marcador ---------- */
+  .topbar{
+    flex:0 0 auto;
+    position:relative;
+    text-align:center;
+    padding:calc(env(safe-area-inset-top,0px) + 14px) 16px 4px;
+  }
+  .count{
+    font-size:clamp(30px,10vw,44px);
+    font-weight:800;
+    line-height:1.1;
+    letter-spacing:-.02em;
+    color:#a8d8ff;
+    font-variant-numeric:tabular-nums;
+  }
+  .sub{
+    margin-top:2px;
+    font-size:13px;
+    color:#7fa3c9;
+    font-variant-numeric:tabular-nums;
+  }
+  .reset{
+    position:absolute;
+    top:calc(env(safe-area-inset-top,0px) + 12px);
+    right:12px;
+    width:38px;height:38px;
+    display:grid;place-items:center;
+    border-radius:50%;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.06);
+    color:#bcd6f0;
+    font-size:17px;
+    cursor:pointer;
+    transition:background .15s, transform .1s;
+  }
+  .reset:active{background:rgba(255,255,255,.16);transform:scale(.94)}
+  .reset:focus-visible{outline:2px solid #7cc4ff;outline-offset:2px}
+
+  /* ---------- Zona de juego ---------- */
+  .play{
+    position:relative;
+    flex:1 1 auto;
+    min-height:0;
+    display:grid;
+    place-items:center;
+    overflow:hidden;
+  }
+  .cookie{
+    position:relative;
+    z-index:1;
+    padding:0;
+    border:none;
+    background:none;
+    line-height:1;
+    font-size:min(46vw,190px,26dvh);
+    cursor:pointer;
+    filter:drop-shadow(0 14px 20px rgba(0,0,0,.5));
+    will-change:transform;
+  }
+  .cookie:active{filter:drop-shadow(0 6px 12px rgba(0,0,0,.45)) brightness(.94)}
+  .cookie:focus-visible{outline:2px dashed #7cc4ff;outline-offset:10px;border-radius:50%}
+
+  /* ---------- Tienda ---------- */
+  .shop{
+    flex:0 0 auto;
+    display:flex;
+    flex-direction:column;
+    max-height:44dvh;
+    padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 12px);
+    border-top:1px solid rgba(255,255,255,.08);
+    border-radius:22px 22px 0 0;
+    background:#08152b;
+  }
+  .shop h2{
+    margin:0 0 8px;
+    font-size:11px;
+    font-weight:700;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    text-align:center;
+    color:#7fa3c9;
+  }
+  .shop-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    overflow-y:auto;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+  }
+
+  .up{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    width:100%;
+    padding:10px 12px;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.09);
+    background:rgba(255,255,255,.05);
+    color:#e8f2ff;
+    font:inherit;
+    text-align:left;
+    cursor:pointer;
+    transition:transform .12s, background .2s, border-color .2s, opacity .2s;
+  }
+  .up:not(:disabled):active{transform:scale(.975)}
+  .up:disabled{opacity:.42;cursor:default}
+  .up:focus-visible{outline:2px solid #7cc4ff;outline-offset:2px}
+  .up.affordable{
+    border-color:rgba(124,196,255,.55);
+    background:rgba(124,196,255,.12);
+  }
+  .up.owned{
+    opacity:1;
+    border-color:rgba(90,220,160,.45);
+    background:rgba(90,220,160,.1);
+  }
+  .up-icon{flex:0 0 auto;font-size:24px;line-height:1}
+  .up-info{display:flex;flex-direction:column;gap:2px;flex:1 1 auto;min-width:0}
+  .up-name{font-size:15px;font-weight:700}
+  .up-desc{font-size:12px;color:#7fa3c9}
+  .up-cost{
+    flex:0 0 auto;
+    font-size:14px;
+    font-weight:700;
+    color:#a8d8ff;
+    white-space:nowrap;
+    font-variant-numeric:tabular-nums;
+  }
+  .up.owned .up-cost{font-size:12px;color:#7ee2b0}
+
+  /* =========================================================
+     DESKTOP
+     ========================================================= */
+  @media (min-width:820px) and (min-height:560px){
+    body{
+      background:#0d1f3c;
+      display:grid;
+      place-items:center;
+      padding:24px;
+    }
+    .app{
+      width:100%;
+      max-width:1000px;
+      height:min(760px,calc(100dvh - 48px));
+      border-radius:20px;
+      border:1px solid rgba(124,196,255,.14);
+      display:grid;
+      grid-template-columns:1fr 360px;
+      grid-template-rows:auto 1fr;
+      grid-template-areas:
+        "top  shop"
+        "play shop";
+    }
+
+    .topbar{
+      grid-area:top;
+      padding:26px 16px 6px;
+    }
+    .count{font-size:56px}
+    .sub{font-size:14px}
+    .reset{top:22px;right:22px}
+
+    .play{
+      grid-area:play;
+      padding-bottom:10px;
+    }
+    .cookie{
+      font-size:min(240px,34vh);
+    }
+    .cookie:hover{filter:drop-shadow(0 16px 24px rgba(0,0,0,.55)) brightness(1.05)}
+    .cookie:active{filter:drop-shadow(0 8px 14px rgba(0,0,0,.5)) brightness(.94)}
+
+    .shop{
+      grid-area:shop;
+      max-height:none;
+      height:100%;
+      padding:26px 18px 22px;
+      border-top:none;
+      border-left:1px solid rgba(255,255,255,.08);
+      border-radius:0 20px 20px 0;
+      background:#08152b;
+    }
+    .shop h2{
+      text-align:left;
+      margin-bottom:14px;
+    }
+    .shop-list{
+      flex:1 1 auto;
+      gap:10px;
+      padding-right:4px;
+    }
+    .up{padding:14px}
+    .up:not(:disabled):hover{
+      background:rgba(124,196,255,.16);
+      border-color:rgba(124,196,255,.5);
+    }
+    .up.owned:hover{background:rgba(90,220,160,.14);border-color:rgba(90,220,160,.5)}
+    .up-icon{font-size:28px}
+    .up-name{font-size:16px}
+    .up-desc{font-size:13px}
+    .up-cost{font-size:15px}
+
+    /* Scrollbar sutil en escritorio */
+    .shop-list::-webkit-scrollbar{width:8px}
+    .shop-list::-webkit-scrollbar-track{background:transparent}
+    .shop-list::-webkit-scrollbar-thumb{
+      background:rgba(124,196,255,.25);
+      border-radius:8px;
+    }
+    .shop-list::-webkit-scrollbar-thumb:hover{background:rgba(124,196,255,.4)}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <button class="reset" id="reset" aria-label="Reiniciar partida">↻</button>
+    <div class="count" id="count">0</div>
+    <div class="sub" id="sub">+1 por clic</div>
+  </header>
+
+  <main class="play" id="play">
+    <button class="cookie" id="cookie" aria-label="Hornear galleta">🍪</button>
+  </main>
+
+  <section class="shop" aria-label="Mejoras">
+    <h2>Mejoras</h2>
+    <div class="shop-list" id="shopList"></div>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =========================================================
+     CONFIGURACIÓN
+     ========================================================= */
+  const STORAGE_KEY = 'cookieClickerSave_v1';
+
+  const UPGRADES = [
+    { id: 'u5',  icon: '', name: 'Mejora 1',     bonus: 5,  cost: 50   },
+    { id: 'u10', icon: '', name: 'Mejora 2', bonus: 10, cost: 300  },
+    { id: 'u15', icon: '', name: 'Mejora 3', bonus: 15, cost: 1500 }
+  ];
+
+  const BASE_PER_CLICK = 1;
+
+  /* =========================================================
+     ESTADO
+     ========================================================= */
+  const state = {
+    cookies: 0,     // galletas actuales
+    owned: []       // ids de mejoras compradas
+  };
+
+  /* =========================================================
+     DOM
+     ========================================================= */
+  const countEl  = document.getElementById('count');
+  const subEl    = document.getElementById('sub');
+  const cookieEl = document.getElementById('cookie');
+  const shopEl   = document.getElementById('shopList');
+  const resetEl  = document.getElementById('reset');
+
+  /* =========================================================
+     PERSISTENCIA (JSON en localStorage)
+     ========================================================= */
+  let saveTimer = null;
+
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = null;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn('No se pudo guardar:', e);
+    }
+  }
+
+  // Evita escribir en cada click seguido (mejor rendimiento)
+  function saveSoon() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(save, 250);
+  }
+
+  function load() {
+    let raw = null;
+    try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { return; }
+    if (!raw) return;
+
+    try {
+      const data = JSON.parse(raw);
+      if (!data || typeof data !== 'object') return;
+
+      if (Number.isFinite(data.cookies) && data.cookies >= 0) {
+        state.cookies = data.cookies;
+      }
+      if (Array.isArray(data.owned)) {
+        state.owned = data.owned.filter(id => UPGRADES.some(u => u.id === id));
+      }
+    } catch (e) {
+      console.warn('Partida corrupta, empezando de cero.');
+    }
+  }
+
+  /* =========================================================
+     LÓGICA
+     ========================================================= */
+  function perClick() {
+    return UPGRADES.reduce(
+      (total, u) => state.owned.includes(u.id) ? total + u.bonus : total,
+      BASE_PER_CLICK
+    );
+  }
+
+  const UNITS = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx'];
+
+  function fmt(n) {
+    if (!Number.isFinite(n)) return '0';
+    if (n < 1000) return String(Math.floor(n));
+
+    let i = 0;
+    let v = n;
+    while (v >= 1000 && i < UNITS.length - 1) { v /= 1000; i++; }
+    const dec = v < 10 ? 2 : v < 100 ? 1 : 0;
+    return v.toFixed(dec).replace('.', ',') + UNITS[i];
+  }
+
+  /* =========================================================
+     RENDER
+     ========================================================= */
+  function buildShop() {
+    shopEl.innerHTML = '';
+    UPGRADES.forEach(u => {
+      const btn = document.createElement('button');
+      btn.className = 'up';
+      btn.type = 'button';
+      btn.dataset.id = u.id;
+      btn.innerHTML =
+        '<span class="up-icon">' + u.icon + '</span>' +
+        '<span class="up-info">' +
+          '<span class="up-name">' + u.name + '</span>' +
+          '<span class="up-desc">+' + u.bonus + ' galletas por clic</span>' +
+        '</span>' +
+        '<span class="up-cost"></span>';
+      btn.addEventListener('click', () => buy(u.id));
+      shopEl.appendChild(btn);
+    });
+  }
+
+  function render() {
+    countEl.textContent = fmt(state.cookies);
+    subEl.textContent = '+' + fmt(perClick()) + ' por clic';
+
+    for (const btn of shopEl.children) {
+      const u = UPGRADES.find(x => x.id === btn.dataset.id);
+      const owned = state.owned.includes(u.id);
+      const canBuy = !owned && state.cookies >= u.cost;
+
+      btn.disabled = owned || !canBuy;
+      btn.classList.toggle('owned', owned);
+      btn.classList.toggle('affordable', canBuy);
+
+      const costEl = btn.querySelector('.up-cost');
+      costEl.textContent = owned ? '✔ Comprado' : '🍪 ' + fmt(u.cost);
+    }
+  }
+
+  /* =========================================================
+     ACCIONES
+     ========================================================= */
+  function doClick() {
+    state.cookies += perClick();
+    saveSoon();
+    render();
+
+    if (cookieEl.animate) {
+      cookieEl.animate(
+        [{ transform: 'scale(.92)' }, { transform: 'scale(1)' }],
+        { duration: 140, easing: 'ease-out' }
+      );
+    }
+  }
+
+  function buy(id) {
+    const u = UPGRADES.find(x => x.id === id);
+    if (!u) return;
+    if (state.owned.includes(id)) return;
+    if (state.cookies < u.cost) return;
+
+    state.cookies -= u.cost;
+    state.owned.push(id);
+    save();
+    render();
+  }
+
+  function reset() {
+    if (!confirm('¿Reiniciar la partida? Perderás todas tus galletas y mejoras.')) return;
+    state.cookies = 0;
+    state.owned = [];
+    save();
+    render();
+  }
+
+  /* =========================================================
+     EVENTOS
+     ========================================================= */
+  // pointerdown = respuesta instantánea en móvil
+  cookieEl.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    doClick();
+  });
+
+  // Accesibilidad: teclado (Enter / Espacio) → detail === 0
+  cookieEl.addEventListener('click', (e) => {
+    if (e.detail === 0) doClick();
+  });
+
+  // Evita el menú contextual por pulsación larga
+  cookieEl.addEventListener('contextmenu', e => e.preventDefault());
+
+  resetEl.addEventListener('click', reset);
+
+  // Guardado de seguridad
+  window.addEventListener('pagehide', save);
+  window.addEventListener('beforeunload', save);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) save();
+  });
+
+  /* =========================================================
+     ARRANQUE
+     ========================================================= */
+  load();
+  buildShop();
+  render();
+})();
+</script>
+</body>
+</html>
